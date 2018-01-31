@@ -3,7 +3,6 @@ package com.zk.xunfei.lib;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -12,15 +11,19 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.iflytek.cloud.ErrorCode;
-import com.iflytek.cloud.InitListener;
-import com.iflytek.cloud.RecognizerListener;
 import com.iflytek.cloud.RecognizerResult;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechRecognizer;
-import com.iflytek.cloud.SpeechUtility;
 import com.iflytek.cloud.ui.RecognizerDialog;
-import com.iflytek.cloud.ui.RecognizerDialogListener;
+import com.zk.xunfei.lib.zk.Constants;
+import com.zk.xunfei.lib.zk.ZKInitListener;
+import com.zk.xunfei.lib.zk.ZKManager;
+import com.zk.xunfei.lib.zk.ZKRecognizerDialog;
+import com.zk.xunfei.lib.zk.ZKRecognizerDialogListener;
+import com.zk.xunfei.lib.zk.ZKRecognizerListener;
+import com.zk.xunfei.lib.zk.utils.CheckPermission;
+import com.zk.xunfei.lib.zk.utils.JsonParser;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -51,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 初始化监听器。
      */
-    private InitListener mInitListener = new InitListener() {
+    private ZKInitListener mInitListener = new ZKInitListener() {
 
         @Override
         public void onInit(int code) {
@@ -68,8 +71,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
         initView();
 
-        // TODO: 2018/1/31 初始化
-        SpeechUtility.createUtility(this, SpeechConstant.APPID +"=5a712fb3");
+        new CheckPermission(this).requestPermissions();
+
+        ZKManager.getInstance().init(this, "5a712fb3");
 
         // 使用SpeechRecognizer对象，可根据回调消息自定义界面；
         mIat = SpeechRecognizer.createRecognizer(this, mInitListener);
@@ -77,15 +81,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        这是弹出的 Dialog
         // 初始化听写Dialog，如果只使用有UI听写功能，无需创建SpeechRecognizer
         // 使用UI听写功能，请根据sdk文件目录下的notice.txt,放置布局文件和图片资源
-        mIatDialog = new RecognizerDialog(this, mInitListener);
+        mIatDialog = new ZKRecognizerDialog(this, mInitListener);
 
-        mSharedPreferences = getSharedPreferences("com.iflytek.setting", Activity.MODE_PRIVATE);
+        // 2018/1/31  同步消息
+        mSharedPreferences = getSharedPreferences(Constants.FILE_NAME_IFLYTEK, Activity.MODE_PRIVATE);
     }
 
     /**
      * 听写监听器。
      */
-    private RecognizerListener mRecognizerListener = new RecognizerListener() {
+    private ZKRecognizerListener mRecognizerListener = new ZKRecognizerListener() {
 
         @Override
         public void onBeginOfSpeech() {
@@ -168,7 +173,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 听写UI监听器
      */
-    private RecognizerDialogListener mRecognizerDialogListener = new RecognizerDialogListener() {
+    private ZKRecognizerDialogListener mRecognizerDialogListener = new ZKRecognizerDialogListener() {
         public void onResult(RecognizerResult results, boolean isLast) {
             if( mTranslateEnable ){
                 printTransResult( results );
@@ -203,9 +208,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // 设置听写引擎
         mIat.setParameter(SpeechConstant.ENGINE_TYPE, mEngineType);
         // 设置返回结果格式
-        mIat.setParameter(SpeechConstant.RESULT_TYPE, "json");
+        mIat.setParameter(SpeechConstant.RESULT_TYPE, Constants.RESULT_TYPE);
 
-        this.mTranslateEnable = mSharedPreferences.getBoolean("translate", false );
+        this.mTranslateEnable = mSharedPreferences.getBoolean(Constants.SP_KEY_TRANSLATE, false );
         if( mTranslateEnable ){
             Log.i( TAG, "translate enable" );
             mIat.setParameter( SpeechConstant.ASR_SCH, "1" );
@@ -213,7 +218,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mIat.setParameter( SpeechConstant.TRS_SRC, "its" );
         }
 
-        String lag = mSharedPreferences.getString("iat_language_preference",
+        String lag = mSharedPreferences.getString(Constants.SP_KEY_IAT_LANGUAGE_PREFERENCE,
                 "mandarin");
         if (lag.equals("en_us")) {
             // 设置语言
@@ -237,18 +242,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         // 设置语音前端点:静音超时时间，即用户多长时间不说话则当做超时处理
-        mIat.setParameter(SpeechConstant.VAD_BOS, mSharedPreferences.getString("iat_vadbos_preference", "4000"));
+        mIat.setParameter(SpeechConstant.VAD_BOS, mSharedPreferences.getString(Constants.SP_KEY_IAT_VADBOS_PREFERENCE, Constants.USER_MUTE_TIMEOUT));
 
         // 设置语音后端点:后端点静音检测时间，即用户停止说话多长时间内即认为不再输入， 自动停止录音
-        mIat.setParameter(SpeechConstant.VAD_EOS, mSharedPreferences.getString("iat_vadeos_preference", "1000"));
+        mIat.setParameter(SpeechConstant.VAD_EOS, mSharedPreferences.getString(Constants.SP_KEY_IAT_VADEOS_PREFERENCE, Constants.USER_STOP_RECORD_TIMEOUT));
 
         // 设置标点符号,设置为"0"返回结果无标点,设置为"1"返回结果有标点
-        mIat.setParameter(SpeechConstant.ASR_PTT, mSharedPreferences.getString("iat_punc_preference", "1"));
+        mIat.setParameter(SpeechConstant.ASR_PTT, mSharedPreferences.getString(Constants.SP_KEY_IAT_PUNC_PREFERENCE, Constants.USER_DEFAULT_FLAG));
 
         // 设置音频保存路径，保存音频格式支持pcm、wav，设置路径为sd卡请注意WRITE_EXTERNAL_STORAGE权限
         // 注：AUDIO_FORMAT参数语记需要更新版本才能生效
-        mIat.setParameter(SpeechConstant.AUDIO_FORMAT,"wav");
-        mIat.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory()+"/msc/iat.wav");
+        mIat.setParameter(SpeechConstant.AUDIO_FORMAT,Constants.AUDIO_FORMAT);
+        mIat.setParameter(SpeechConstant.ASR_AUDIO_PATH, Constants.DEFAULT_PATH);
     }
 
     private void printTransResult (RecognizerResult results) {
@@ -262,9 +267,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
     }
-
-
-
 
     private void showTip(final String str) {
         Toast mToast = Toast.makeText(this, str, Toast.LENGTH_SHORT);
