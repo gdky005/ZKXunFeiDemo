@@ -1,5 +1,6 @@
 package com.zk.xunfei.lib;
 
+
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -15,15 +16,14 @@ import com.iflytek.cloud.RecognizerResult;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechRecognizer;
-import com.iflytek.cloud.ui.RecognizerDialog;
-import com.zk.xunfei.lib.zk.Constants;
-import com.zk.xunfei.lib.zk.ZKInitListener;
-import com.zk.xunfei.lib.zk.ZKManager;
-import com.zk.xunfei.lib.zk.ZKRecognizerDialog;
-import com.zk.xunfei.lib.zk.ZKRecognizerDialogListener;
-import com.zk.xunfei.lib.zk.ZKRecognizerListener;
-import com.zk.xunfei.lib.zk.utils.CheckPermission;
-import com.zk.xunfei.lib.zk.utils.JsonParser;
+import com.zk.xf.lib.Constants;
+import com.zk.xf.lib.ZKInitListener;
+import com.zk.xf.lib.ZKManager;
+import com.zk.xf.lib.ZKRecognizerDialog;
+import com.zk.xf.lib.ZKRecognizerDialogListener;
+import com.zk.xf.lib.ZKRecognizerListener;
+import com.zk.xf.lib.utils.CheckPermission;
+import com.zk.xf.lib.utils.JsonParser;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private String mEngineType = SpeechConstant.TYPE_CLOUD;
     private EditText mResultText;
     // 语音听写UI
-    private RecognizerDialog mIatDialog;
+    private ZKRecognizerDialog mIatDialog;
     // 用HashMap存储听写结果
     private HashMap<String, String> mIatResults = new LinkedHashMap<String, String>();
 
@@ -213,7 +213,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         this.mTranslateEnable = mSharedPreferences.getBoolean(Constants.SP_KEY_TRANSLATE, false );
         if( mTranslateEnable ){
             Log.i( TAG, "translate enable" );
-            mIat.setParameter( SpeechConstant.ASR_SCH, "1" );
+            mIat.setParameter(SpeechConstant.ASR_SCH, "1" );
             mIat.setParameter( SpeechConstant.ADD_CAP, "translate" );
             mIat.setParameter( SpeechConstant.TRS_SRC, "its" );
         }
@@ -313,6 +313,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (isShowDialog) {
                     // 显示听写对话框
                     mIatDialog.setListener(mRecognizerDialogListener);
+
                     mIatDialog.show();
                     showTip("请开始说话…");
                 } else {

@@ -1,4 +1,4 @@
-package com.zk.xunfei.lib.zk;
+package com.zk.xf.lib;
 
 import com.iflytek.cloud.RecognizerListener;
 

@@ -1,4 +1,4 @@
-package com.zk.xunfei.lib.zk.utils;
+package com.zk.xf.lib.utils;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
